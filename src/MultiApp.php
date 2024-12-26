@@ -71,7 +71,6 @@ class MultiApp
         $scriptName = $this->getScriptName();
         $defaultApp = $this->app->config->get('app.default_app') ?: 'index';
         $appName    = $this->app->http->getName();
-
         if ($appName || ($scriptName && !in_array($scriptName, ['index', 'router', 'think','api']))) {
             $appName = $appName ?: $scriptName;
             $this->app->http->setBind();
@@ -79,7 +78,7 @@ class MultiApp
             // 自动多应用识别
             $this->app->http->setBind(false);
             $appName    = null;
-
+          
             $bind = $this->app->config->get('app.domain_bind', []);
 
             if (!empty($bind)) {
@@ -104,11 +103,16 @@ class MultiApp
                 $map  = $this->app->config->get('app.app_map', []);
                 $deny = $this->app->config->get('app.deny_app_list', []);
                 $name = current(explode('/', $path));
+                // 兼容 think run 兼容模式
+                if($name == 'api.php'){
+                    $name = '';
+                    $this->app->request->setPathinfo('');
+                }
 
                 if (strpos($name, '.')) {
                     $name = strstr($name, '.', true);
                 }
-
+               
                 if (isset($map[$name])) {
                     if ($map[$name] instanceof Closure) {
                         $result  = call_user_func_array($map[$name], [$this->app]);
@@ -123,9 +127,10 @@ class MultiApp
                 } else {
                     $appName = $name ?: $defaultApp;
                     $appPath = $this->app->http->getPath() ?: $this->app->getBasePath() . $appName . DIRECTORY_SEPARATOR;
-
+                   
                     if (!is_dir($appPath)) {
                         $express = $this->app->config->get('app.app_express', false);
+                      
                         if ($express) {
                             $this->setApp($defaultApp);
                             return true;
@@ -134,14 +139,14 @@ class MultiApp
                         }
                     }
                 }
-
+             
                 if ($name) {
                     $this->app->request->setRoot('/' . $name);
                     $this->app->request->setPathinfo(strpos($path, '/') ? ltrim(strstr($path, '/'), '/') : '');
                 }
             }
         }
-
+       
         $this->setApp($appName ?: $defaultApp);
         return true;
     }
@@ -176,11 +181,11 @@ class MultiApp
         $this->app->setAppPath($appPath);
         // 设置应用命名空间
         $this->app->setNamespace($this->app->config->get('app.app_namespace') ?: 'app\\' . $appName);
-
+       
         if (is_dir($appPath)) {
             $this->app->setRuntimePath($this->app->getRuntimePath() . $appName . DIRECTORY_SEPARATOR);
             $this->app->http->setRoutePath($this->getRoutePath());
-
+          
             //加载应用
             $this->loadApp($appName, $appPath);
         }
