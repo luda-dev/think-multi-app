@@ -72,7 +72,7 @@ class MultiApp
         $defaultApp = $this->app->config->get('app.default_app') ?: 'index';
         $appName    = $this->app->http->getName();
 
-        if ($appName || ($scriptName && !in_array($scriptName, ['index', 'router', 'think']))) {
+        if ($appName || ($scriptName && !in_array($scriptName, ['index', 'router', 'think','api']))) {
             $appName = $appName ?: $scriptName;
             $this->app->http->setBind();
         } else {
