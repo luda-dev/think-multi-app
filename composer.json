@@ -6,6 +6,10 @@
         {
             "name": "liu21st",
             "email": "liu21st@gmail.com"
+        },
+        {
+            "name": "luda",
+            "email": "admin@nbui.cn"
         }
     ],
     "require": {

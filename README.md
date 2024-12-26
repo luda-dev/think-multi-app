@@ -5,7 +5,7 @@
 ## 安装
 
 ~~~
-composer require topthink/think-multi-app
+composer require luda-dev/think-multi-app
 ~~~
 
 ## 使用
