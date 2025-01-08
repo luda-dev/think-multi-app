@@ -29,6 +29,7 @@ class MultiApp
 
     public function __construct(App $app)
     {
+        
         $this->app  = $app;
     }
 
@@ -99,20 +100,23 @@ class MultiApp
             }
 
             if (!$this->app->http->isBind()) {
-                $path = $this->app->request->pathinfo();
+                // vadmin : 修改过去全链接
+                $path = $this->app->request->server('REQUEST_URI');
                 $map  = $this->app->config->get('app.app_map', []);
                 $deny = $this->app->config->get('app.deny_app_list', []);
+                $path = ltrim($path,'/');
                 $name = current(explode('/', $path));
-                // 兼容 think run 兼容模式
+                // vadmin : 修改兼容 swoole 、 think run 
                 if($name == 'api.php'){
-                    $name = '';
-                    $this->app->request->setPathinfo('');
+                    $name = explode('/', $path)[1];
+                    $path = '';
+                    $this->app->config->set(['controller_layer' => 'frontend'], 'route');
                 }
 
                 if (strpos($name, '.')) {
                     $name = strstr($name, '.', true);
                 }
-               
+                
                 if (isset($map[$name])) {
                     if ($map[$name] instanceof Closure) {
                         $result  = call_user_func_array($map[$name], [$this->app]);
@@ -139,7 +143,7 @@ class MultiApp
                         }
                     }
                 }
-             
+          
                 if ($name) {
                     $this->app->request->setRoot('/' . $name);
                     $this->app->request->setPathinfo(strpos($path, '/') ? ltrim(strstr($path, '/'), '/') : '');
@@ -185,7 +189,7 @@ class MultiApp
         if (is_dir($appPath)) {
             $this->app->setRuntimePath($this->app->getRuntimePath() . $appName . DIRECTORY_SEPARATOR);
             $this->app->http->setRoutePath($this->getRoutePath());
-          
+           
             //加载应用
             $this->loadApp($appName, $appPath);
         }
@@ -198,6 +202,7 @@ class MultiApp
      */
     protected function loadApp(string $appName, string $appPath): void
     {
+        
         if (is_file($appPath . 'common.php')) {
             include_once $appPath . 'common.php';
         }
