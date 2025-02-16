@@ -101,14 +101,14 @@ class MultiApp
             }
          
             if (!$this->app->http->isBind()) {
-                // vadmin : 修改过去全链接
+                // vmod : 修改过去全链接
                 $request_uri = $this->app->request->server('REQUEST_URI');
                 $path = $this->app->request->pathinfo();
                 $map  = $this->app->config->get('app.app_map', []);
                 $deny = $this->app->config->get('app.deny_app_list', []);
                 $path = ltrim($path,'/');
                 $name = current(explode('/', $path));
-                // vadmin : 修改兼容 swoole 、 think run 
+                // vmod : 修改兼容 swoole 、 think run 
                 // if(strpos($request_uri,"client.php")){
                 //     $this->app->config->set(['controller_layer' => 'client'], 'route');
                 // }
@@ -117,7 +117,7 @@ class MultiApp
                     $name = strstr($name, '.', true);
                 }
 
-               // vadmin : 修改兼容 swoole 、 think run 
+               // vmod : 修改兼容 swoole 、 think run 
                 // if($name === 'client'){
                 //     $name =  explode('/', $path)[1] ?? '';
                 //     $path = str_replace("client.php/",'',$path);
@@ -208,7 +208,6 @@ class MultiApp
      */
     protected function loadApp(string $appName, string $appPath): void
     {
-        
         if (is_file($appPath . 'common.php')) {
             include_once $appPath . 'common.php';
         }
@@ -221,13 +220,12 @@ class MultiApp
             $this->app->config->load($file, pathinfo($file, PATHINFO_FILENAME));
         }
         
-        // $routes = glob($this->app->getRootPath() . 'modules' . DIRECTORY_SEPARATOR . '*'.DIRECTORY_SEPARATOR.'route' . $this->app->getConfigExt());
- 
-        // foreach ($routes as $route) {
-        //     $this->app->http->setRoutePath($route);
-           
-        // }
-
+        $routes = glob($this->app->getRootPath() . 'modules' . DIRECTORY_SEPARATOR . '*'.DIRECTORY_SEPARATOR.'route' . $this->app->getConfigExt());
+     
+        foreach ($routes  as $file) {
+            include $file;
+        }
+      
         if (is_file($appPath . 'event.php')) {
             $this->app->loadEvent(include $appPath . 'event.php');
         }
