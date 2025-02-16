@@ -17,6 +17,7 @@ use think\App;
 use think\exception\HttpException;
 use think\Request;
 use think\Response;
+use think\facade\Route;
 
 /**
  * 多应用模式支持
@@ -72,7 +73,7 @@ class MultiApp
         $scriptName = $this->getScriptName();
         $defaultApp = $this->app->config->get('app.default_app') ?: 'index';
         $appName    = $this->app->http->getName();
-        if ($appName || ($scriptName && !in_array($scriptName, ['index', 'router', 'think','api']))) {
+        if ($appName || ($scriptName && !in_array($scriptName, ['index', 'router', 'think','client']))) {
             $appName = $appName ?: $scriptName;
             $this->app->http->setBind();
         } else {
@@ -81,7 +82,7 @@ class MultiApp
             $appName    = null;
           
             $bind = $this->app->config->get('app.domain_bind', []);
-
+          
             if (!empty($bind)) {
                 // 获取当前子域名
                 $subDomain = $this->app->request->subDomain();
@@ -98,25 +99,30 @@ class MultiApp
                     $this->app->http->setBind();
                 }
             }
-
+         
             if (!$this->app->http->isBind()) {
                 // vadmin : 修改过去全链接
-                $path = $this->app->request->server('REQUEST_URI');
+                $request_uri = $this->app->request->server('REQUEST_URI');
+                $path = $this->app->request->pathinfo();
                 $map  = $this->app->config->get('app.app_map', []);
                 $deny = $this->app->config->get('app.deny_app_list', []);
                 $path = ltrim($path,'/');
                 $name = current(explode('/', $path));
                 // vadmin : 修改兼容 swoole 、 think run 
-                if($name == 'api.php'){
-                    $name = explode('/', $path)[1];
-                    $path = '';
-                    $this->app->config->set(['controller_layer' => 'frontend'], 'route');
-                }
+                // if(strpos($request_uri,"client.php")){
+                //     $this->app->config->set(['controller_layer' => 'client'], 'route');
+                // }
 
                 if (strpos($name, '.')) {
                     $name = strstr($name, '.', true);
                 }
-                
+
+               // vadmin : 修改兼容 swoole 、 think run 
+                // if($name === 'client'){
+                //     $name =  explode('/', $path)[1] ?? '';
+                //     $path = str_replace("client.php/",'',$path);
+                // }
+
                 if (isset($map[$name])) {
                     if ($map[$name] instanceof Closure) {
                         $result  = call_user_func_array($map[$name], [$this->app]);
@@ -125,13 +131,14 @@ class MultiApp
                         $appName = $map[$name];
                     }
                 } elseif ($name && (false !== array_search($name, $map) || in_array($name, $deny))) {
+                  
                     throw new HttpException(404, 'app not exists:' . $name);
                 } elseif ($name && isset($map['*'])) {
                     $appName = $map['*'];
                 } else {
                     $appName = $name ?: $defaultApp;
                     $appPath = $this->app->http->getPath() ?: $this->app->getBasePath() . $appName . DIRECTORY_SEPARATOR;
-                   
+
                     if (!is_dir($appPath)) {
                         $express = $this->app->config->get('app.app_express', false);
                       
@@ -143,14 +150,14 @@ class MultiApp
                         }
                     }
                 }
-          
+               
                 if ($name) {
                     $this->app->request->setRoot('/' . $name);
                     $this->app->request->setPathinfo(strpos($path, '/') ? ltrim(strstr($path, '/'), '/') : '');
                 }
             }
         }
-       
+        
         $this->setApp($appName ?: $defaultApp);
         return true;
     }
@@ -181,15 +188,14 @@ class MultiApp
         $this->app->http->name($appName);
 
         $appPath = $this->app->http->getPath() ?: $this->app->getBasePath() . $appName . DIRECTORY_SEPARATOR;
-
         $this->app->setAppPath($appPath);
         // 设置应用命名空间
         $this->app->setNamespace($this->app->config->get('app.app_namespace') ?: 'app\\' . $appName);
-       
+        // include_once -> 提前需要知道当前应用需要加载那些模块
         if (is_dir($appPath)) {
             $this->app->setRuntimePath($this->app->getRuntimePath() . $appName . DIRECTORY_SEPARATOR);
             $this->app->http->setRoutePath($this->getRoutePath());
-           
+        
             //加载应用
             $this->loadApp($appName, $appPath);
         }
@@ -214,6 +220,13 @@ class MultiApp
         foreach ($files as $file) {
             $this->app->config->load($file, pathinfo($file, PATHINFO_FILENAME));
         }
+        
+        // $routes = glob($this->app->getRootPath() . 'modules' . DIRECTORY_SEPARATOR . '*'.DIRECTORY_SEPARATOR.'route' . $this->app->getConfigExt());
+ 
+        // foreach ($routes as $route) {
+        //     $this->app->http->setRoutePath($route);
+           
+        // }
 
         if (is_file($appPath . 'event.php')) {
             $this->app->loadEvent(include $appPath . 'event.php');

@@ -202,10 +202,8 @@ class Url extends UrlBuild
         } else {
             $url .= $suffix . $anchor;
         }
-
         // 检测域名
         $domain = $this->parseDomain($url, $domain);
-
         // URL组装
         return $domain . rtrim($this->root, '/') . '/' . ltrim($url, '/');
     }
